@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "markerless-backend"
+version = "0.1.0"
+description = "Markerless BIM/CAD inspection PoC backend (FastAPI)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "python-multipart>=0.0.9",
+    "Pillow>=10",
+    "scikit-image>=0.24",
+]
+
+[project.optional-dependencies]
+ai = ["onnxruntime>=1.18"]  # AI 마스크/깊이 (모델: tools/fetch_models.sh)
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

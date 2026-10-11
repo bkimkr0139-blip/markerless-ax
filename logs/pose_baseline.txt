@@ -1,0 +1,110 @@
+/Users/wizbase/works/bimcad/markerless-poc/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+  BOX-A  full  #0 표면변위   0.1cm 중심   0.1cm
+  BOX-A  three #0 표면변위   0.1cm 중심   0.1cm
+  BOX-A  two   #0 표면변위   0.1cm 중심   0.1cm
+  BOX-A  front #0 표면변위   0.1cm 중심   0.1cm
+  BOX-A  low   #0 표면변위  24.6cm 중심   5.3cm
+  BOX-A  full  #1 표면변위   0.1cm 중심   0.1cm
+  BOX-A  three #1 표면변위   0.1cm 중심   0.1cm
+  BOX-A  two   #1 표면변위   0.0cm 중심   0.0cm
+  BOX-A  front #1 표면변위   0.1cm 중심   0.1cm
+  BOX-A  low   #1 표면변위   0.1cm 중심   0.1cm
+  BOX-A  full  #2 표면변위   0.1cm 중심   0.1cm
+  BOX-A  three #2 표면변위   0.1cm 중심   0.1cm
+  BOX-A  two   #2 표면변위   0.1cm 중심   0.1cm
+  BOX-A  front #2 표면변위   0.0cm 중심   0.0cm
+  BOX-A  low   #2 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  full  #0 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  three #0 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  two   #0 표면변위   0.1cm 중심   0.2cm
+  L-OBJ  front #0 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  low   #0 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  full  #1 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  three #1 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  two   #1 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  front #1 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  low   #1 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  full  #2 표면변위   0.2cm 중심   0.2cm
+  L-OBJ  three #2 표면변위   0.0cm 중심   0.0cm
+  L-OBJ  two   #2 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  front #2 표면변위   0.1cm 중심   0.1cm
+  L-OBJ  low   #2 표면변위   0.1cm 중심   0.1cm
+  CYL-A  full  #0 표면변위   0.1cm 중심   0.1cm
+  CYL-A  three #0 표면변위   0.0cm 중심   0.0cm
+  CYL-A  two   #0 표면변위   0.3cm 중심   0.3cm
+  CYL-A  front #0 표면변위   0.2cm 중심   0.2cm
+  CYL-A  low   #0 표면변위   0.2cm 중심   0.1cm
+  CYL-A  full  #1 표면변위   0.1cm 중심   0.1cm
+  CYL-A  three #1 표면변위   0.1cm 중심   0.0cm
+  CYL-A  two   #1 표면변위   0.1cm 중심   0.1cm
+  CYL-A  front #1 표면변위   0.2cm 중심   0.2cm
+  CYL-A  low   #1 표면변위   0.2cm 중심   0.2cm
+  CYL-A  full  #2 표면변위   0.1cm 중심   0.1cm
+  CYL-A  three #2 표면변위   0.1cm 중심   0.1cm
+  CYL-A  two   #2 표면변위   0.2cm 중심   0.1cm
+  CYL-A  front #2 표면변위   0.1cm 중심   0.1cm
+  CYL-A  low   #2 표면변위   0.2cm 중심   0.1cm
+  TALL   full  #0 표면변위   0.0cm 중심   0.0cm
+  TALL   three #0 표면변위   0.1cm 중심   0.1cm
+  TALL   two   #0 표면변위   0.1cm 중심   0.1cm
+  TALL   front #0 표면변위   0.2cm 중심   0.2cm
+  TALL   low   #0 표면변위   1.0cm 중심   1.0cm
+  TALL   full  #1 표면변위   0.1cm 중심   0.1cm
+  TALL   three #1 표면변위   0.1cm 중심   0.1cm
+  TALL   two   #1 표면변위   0.1cm 중심   0.1cm
+  TALL   front #1 표면변위   0.2cm 중심   0.2cm
+  TALL   low   #1 표면변위   1.6cm 중심   1.6cm
+  TALL   full  #2 표면변위   0.1cm 중심   0.1cm
+  TALL   three #2 표면변위   5.8cm 중심   5.8cm
+  TALL   two   #2 표면변위   0.0cm 중심   0.0cm
+  TALL   front #2 표면변위   0.1cm 중심   0.1cm
+  TALL   low   #2 표면변위  20.3cm 중심  20.3cm
+  CAB    full  #0 표면변위   0.0cm 중심   0.0cm
+  CAB    three #0 표면변위   0.2cm 중심   0.2cm
+  CAB    two   #0 표면변위   0.1cm 중심   0.1cm
+  CAB    front #0 표면변위   0.1cm 중심   0.1cm
+  CAB    low   #0 표면변위   0.2cm 중심   0.2cm
+  CAB    full  #1 표면변위   0.0cm 중심   0.0cm
+  CAB    three #1 표면변위   0.6cm 중심   0.6cm
+  CAB    two   #1 표면변위   0.1cm 중심   0.0cm
+  CAB    front #1 표면변위   0.2cm 중심   0.2cm
+  CAB    low   #1 표면변위   0.0cm 중심   0.0cm
+  CAB    full  #2 표면변위   0.0cm 중심   0.0cm
+  CAB    three #2 표면변위   0.1cm 중심   0.1cm
+  CAB    two   #2 표면변위   0.1cm 중심   0.1cm
+  CAB    front #2 표면변위   0.0cm 중심   0.0cm
+  CAB    low   #2 표면변위   0.2cm 중심   0.2cm
+  PURI   full  #0 표면변위   0.1cm 중심   0.1cm
+  PURI   three #0 표면변위   0.2cm 중심   0.2cm
+  PURI   two   #0 표면변위   0.1cm 중심   0.1cm
+  PURI   front #0 표면변위   0.2cm 중심   0.2cm
+  PURI   low   #0 표면변위   0.1cm 중심   0.1cm
+  PURI   full  #1 표면변위   0.1cm 중심   0.1cm
+  PURI   three #1 표면변위   0.1cm 중심   0.1cm
+  PURI   two   #1 표면변위   0.0cm 중심   0.0cm
+  PURI   front #1 표면변위   0.1cm 중심   0.1cm
+  PURI   low   #1 표면변위   0.1cm 중심   0.1cm
+  PURI   full  #2 표면변위   0.2cm 중심   0.2cm
+  PURI   three #2 표면변위   0.2cm 중심   0.2cm
+  PURI   two   #2 표면변위   0.1cm 중심   0.1cm
+  PURI   front #2 표면변위   1.8cm 중심   0.3cm
+  PURI   low   #2 표면변위   0.1cm 중심   0.1cm
+
+=== 자세 정확도 — 90건 (실패 0건), 67초 ===
+  전체       n= 90  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm  97%  ≤4cm  97%  >8cm   2%
+
+[관측 방식별]
+  full     n= 18  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  three    n= 18  표면변위 중앙  0.1cm  p90  0.3cm  ≤2cm  94%  ≤4cm  94%  >8cm   0%
+  two      n= 18  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  front    n= 18  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  low      n= 18  표면변위 중앙  0.2cm  p90  7.2cm  ≤2cm  89%  ≤4cm  89%  >8cm  11%
+
+[자산별]
+  BOX-A    n= 15  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm  93%  ≤4cm  93%  >8cm   7%
+  L-OBJ    n= 15  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  CYL-A    n= 15  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  TALL     n= 15  표면변위 중앙  0.1cm  p90  4.1cm  ≤2cm  87%  ≤4cm  87%  >8cm   7%
+  CAB      n= 15  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%
+  PURI     n= 15  표면변위 중앙  0.1cm  p90  0.2cm  ≤2cm 100%  ≤4cm 100%  >8cm   0%

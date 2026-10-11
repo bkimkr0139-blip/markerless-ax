@@ -1,0 +1,66 @@
+{
+ "bilinear_obs": {
+  "absrel": 0.0052,
+  "rmse_m": 0.0304,
+  "d1": 0.9992,
+  "frames": 60
+ },
+ "guided_obs": {
+  "absrel": 0.0059,
+  "rmse_m": 0.0382,
+  "d1": 0.9988,
+  "frames": 60
+ },
+ "bilinear_edge": {
+  "absrel": 0.0659,
+  "rmse_m": 0.2907,
+  "d1": 0.9299,
+  "frames": 58
+ },
+ "guided_edge": {
+  "absrel": 0.0685,
+  "rmse_m": 0.2889,
+  "d1": 0.9438,
+  "frames": 59
+ },
+ "ai_hole": {
+  "absrel": 0.1962,
+  "rmse_m": 1.5296,
+  "d1": 0.6132,
+  "frames": 59
+ },
+ "nearest_hole": {
+  "absrel": 0.2221,
+  "rmse_m": 1.8495,
+  "d1": 0.5293,
+  "frames": 60
+ },
+ "ai_hole_far": {
+  "absrel": 0.2984,
+  "rmse_m": 2.4207,
+  "d1": 0.3418,
+  "frames": 22
+ },
+ "ai_hole_inrange": {
+  "absrel": 0.0741,
+  "rmse_m": 0.2454,
+  "d1": 0.9373,
+  "frames": 59
+ },
+ "nearest_hole_inrange": {
+  "absrel": 0.058,
+  "rmse_m": 0.2199,
+  "d1": 0.9395,
+  "frames": 59
+ },
+ "coverage": {
+  "lidar": 0.836,
+  "lidar+ai": 0.977
+ },
+ "alignFit": {
+  "accepted": 59,
+  "of": 60,
+  "meanR2": 0.934
+ },
+ "secPerFrame": 0.26
+}

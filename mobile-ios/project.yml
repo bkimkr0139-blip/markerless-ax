@@ -1,0 +1,58 @@
+name: Markerless
+options:
+  bundleIdPrefix: kr.poc.markerless
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"  # iPhone (LiDAR 있으면 메시, 없으면 VIO 특징점 모드)
+    INFOPLIST_KEY_ITS_APP_USES_NON_EXEMPT_ENCRYPTION: "NO"
+    GENERATE_INFOPLIST_FILE: "YES"
+    DEVELOPMENT_TEAM: "UL79JBNRZW"
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"  # tools/ios_install.sh 가 빌드 때 yyMMdd.HHmm 으로 덮어쓴다
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"  # 빌드 번호 스크립트가 BuildInfo.swift·Info.plist를 갱신한다
+
+targets:
+  Markerless:
+    type: application
+    platform: iOS
+    sources:
+      - Markerless
+    preBuildScripts:
+      - name: 빌드 번호 생성 (yyMMdd.HHmm)
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/Markerless/App/BuildInfo.swift
+        script: |
+          # 빌드할 때마다 새 번호 — 폰에 설치된 앱이 최신인지 화면·로그·devicectl로 확인한다
+          # tools/ios_install.sh는 CURRENT_PROJECT_VERSION=<번호>로 넘겨 앱 정보(CFBundleVersion)와 같은 번호를 쓴다
+          STAMP="$CURRENT_PROJECT_VERSION"
+          [ "$STAMP" = "1" ] && STAMP=$(date +%y%m%d.%H%M)
+          SHOW=$(date "+%m/%d %H:%M")
+          cat > "$SRCROOT/Markerless/App/BuildInfo.swift" <<EOF
+          // BuildInfo.swift — 빌드 때마다 project.yml의 '빌드 번호 생성' 스크립트가 덮어쓴다 (수정 금지)
+          enum BuildInfo {
+              static let number = "$STAMP"
+              static let time = "$SHOW"
+              static let label = "빌드 $STAMP"
+          }
+          EOF
+    info:
+      path: Markerless/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSCameraUsageDescription: "시공검수를 위해 주변을 스캔하고 사물의 형상을 기록합니다."
+        NSLocationWhenInUseUsageDescription: "자산을 스캔한 위치(GPS)를 기록해 자산 목록과 백오피스에 표시합니다."
+        NSMotionUsageDescription: "공간 스캔 중 기압계·모션 센서 값을 참고용 메타데이터로 함께 기록합니다."
+        NSLocalNetworkUsageDescription: "Mac Studio의 검수 서버에 측정 데이터를 전송합니다."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        CFBundleDisplayName: 검수스캔

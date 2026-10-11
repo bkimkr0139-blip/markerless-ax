@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://markerless-poc.local/schemas/mobile-package.schema.json",
+  "title": "mobile-package",
+  "description": "Revit/BIM → 마커리스 검수 백엔드 임포트 패키지 (POST /api/v1/packages). backend/app/schemas.py PackageIn과 동기화. tolerance/orientation 누락은 422(BIM 데이터 오류, 지시서 12.2).",
+  "type": "object",
+  "required": ["projectId", "revision", "spaceId", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "projectId": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "revision": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "spaceId": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "spaceName": { "type": "string" },
+    "level": { "type": "string" },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["assetId", "designPose", "tolerance"],
+        "additionalProperties": false,
+        "properties": {
+          "assetId": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "ifcGuid": { "type": ["string", "null"] },
+          "family": { "type": ["string", "null"] },
+          "type": { "type": ["string", "null"] },
+          "designPose": { "$ref": "#/definitions/pose" },
+          "tolerance": { "$ref": "#/definitions/tolerance" },
+          "cad": { "type": ["string", "null"], "description": "패키지 내 GLB 경로 (PoC는 메타만 저장)" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "pose": {
+      "type": "object",
+      "required": ["positionM"],
+      "additionalProperties": false,
+      "properties": {
+        "positionM": {
+          "type": "object",
+          "required": ["x", "y", "z"],
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          }
+        },
+        "rpyDeg": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "roll": { "type": "number" },
+            "pitch": { "type": "number" },
+            "yaw": { "type": "number" }
+          }
+        },
+        "quat": {
+          "type": "object",
+          "description": "{x,y,z,w} Hamilton — 서버가 rpyDeg로 정규화",
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" },
+            "w": { "type": "number" }
+          }
+        }
+      }
+    },
+    "tolerance": {
+      "type": "object",
+      "required": ["positionMm"],
+      "additionalProperties": false,
+      "properties": {
+        "positionMm": { "type": "number", "exclusiveMinimum": 0 },
+        "zToleranceMm": { "type": "number", "exclusiveMinimum": 0 },
+        "rotationDeg": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

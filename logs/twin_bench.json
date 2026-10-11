@@ -1,0 +1,137 @@
+{
+ "geometry": {
+  "planeErrMm": [
+   0.7,
+   0.8,
+   1.6,
+   2.0,
+   0.9,
+   0.9
+  ],
+  "planeErrMeanMm": 1.1,
+  "roomDimErrMm": [
+   5.1,
+   4.1
+  ],
+  "coverage": 0.713,
+  "walls": 4,
+  "doorFound": true
+ },
+ "texture": {
+  "meanAbsColorErr(0-255)": 24.5,
+  "samples": 4037,
+  "textureCoverage": 0.9847,
+  "unobservedFaces": 5363,
+  "texelCm": 1.21
+ },
+ "revisit5": {
+  "areaDriftPct": 1.12,
+  "wallThicknessMm": [
+   3.1,
+   3.2,
+   3.4,
+   3.6,
+   3.7
+  ]
+ },
+ "poseRobustness": {
+  "pose±0cm": {
+   "noTrack": {
+    "planeErrMeanMm": 1.1,
+    "wallLayerSpreadMm": 3.0
+   },
+   "track": {
+    "planeErrMeanMm": 1.2,
+    "wallLayerSpreadMm": 3.0
+   }
+  },
+  "pose±1cm/0.3°": {
+   "noTrack": {
+    "planeErrMeanMm": 4.3,
+    "wallLayerSpreadMm": 13.9
+   },
+   "track": {
+    "planeErrMeanMm": 7.5,
+    "wallLayerSpreadMm": 16.7
+   }
+  },
+  "pose±2cm/0.6°": {
+   "noTrack": {
+    "planeErrMeanMm": 8.7,
+    "wallLayerSpreadMm": 26.2
+   },
+   "track": {
+    "planeErrMeanMm": 13.2,
+    "wallLayerSpreadMm": 32.0
+   }
+  },
+  "pose±4cm/1.2°": {
+   "noTrack": {
+    "planeErrMeanMm": 21.6,
+    "wallLayerSpreadMm": 59.0
+   },
+   "track": {
+    "planeErrMeanMm": 20.9,
+    "wallLayerSpreadMm": 64.9
+   }
+  }
+ },
+ "performance": {
+  "frames": 300,
+  "fuseSec": 7.9,
+  "fuseFps": 37.9,
+  "meshSec": 0.2,
+  "textureSec": 34.4,
+  "faces": 152644,
+  "blocks": 517,
+  "peakRssMB": 2613,
+  "textureCoverage": 0.9984
+ },
+ "quality": {
+  "poseGraph": {
+   "drift 2mm/프레임·0.05°": {
+    "wallLayerSpreadMm": {
+     "보정 전": 86.5,
+     "포즈 그래프": 5.2
+    },
+    "accepted": true,
+    "loops": 43
+   },
+   "drift 4mm/프레임·0.1°": {
+    "wallLayerSpreadMm": {
+     "보정 전": 176.7,
+     "포즈 그래프": 18.0
+    },
+    "accepted": true,
+    "loops": 30
+   },
+   "drift 없음(회귀)": {
+    "accepted": false
+   }
+  },
+  "meshRegularize": {
+   "깊이 잡음 3mm": {
+    "구조면 평균 평면편차(mm)": {
+     "전": 2.79,
+     "후": 0.97
+    },
+    "평면오차(mm)": {
+     "전": 1.18,
+     "후": 0.25
+    },
+    "corners": 216
+   },
+   "깊이 잡음 8mm": {
+    "구조면 평균 평면편차(mm)": {
+     "전": 3.43,
+     "후": 1.1
+    },
+    "평면오차(mm)": {
+     "전": 1.57,
+     "후": 0.41
+    },
+    "corners": 289
+   }
+  }
+ }
+}

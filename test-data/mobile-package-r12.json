@@ -1,0 +1,56 @@
+{
+ "projectId": "PJT001",
+ "revision": "R12",
+ "spaceId": "MECH-301",
+ "spaceName": "\uc9c0\ud558 \uae30\uacc4\uc2e4",
+ "level": "B1",
+ "assets": [
+  {
+   "assetId": "PUMP-301",
+   "ifcGuid": "1mdFa0f5X8xv$",
+   "family": "Pump",
+   "type": "M_Pump-Vertical",
+   "designPose": {
+    "positionM": {
+     "x": 12.35,
+     "y": 8.22,
+     "z": 1.25
+    },
+    "rpyDeg": {
+     "roll": 0,
+     "pitch": 0,
+     "yaw": 90
+    }
+   },
+   "tolerance": {
+    "positionMm": 15,
+    "zToleranceMm": 10,
+    "rotationDeg": 1
+   },
+   "cad": "assets/PUMP-301.glb"
+  },
+  {
+   "assetId": "COL-101",
+   "family": "Column",
+   "type": "M_Concrete-Column",
+   "designPose": {
+    "positionM": {
+     "x": 5.0,
+     "y": 3.1,
+     "z": 0.0
+    },
+    "quat": {
+     "x": 0,
+     "y": 0,
+     "z": 0.3826834,
+     "w": 0.9238795
+    }
+   },
+   "tolerance": {
+    "positionMm": 10,
+    "rotationDeg": 0.5
+   },
+   "cad": "assets/COL-101.glb"
+  }
+ ]
+}

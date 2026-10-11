@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.ipa
+
+# macOS
+.DS_Store
+
+# Runtime data
+backend/*.db
+backend/*.sqlite3
+backend/logs/
+storage/*
+!storage/.gitkeep
+
+# Secrets (외부 공개용 API 키)
+.api-key
+
+# Ground truth raw data (keep templates)
+ground-truth/*.csv
+!ground-truth/template.csv
+
+# 배포 때 자동 생성되는 접속 기본값 (API 키 포함)
+mobile-ios/Markerless/App/DevDefaults.swift
+backups/
+
+# AI 모델 가중치(수십~백 MB) — tools/fetch_models.sh 로 내려받는다
+models/*.onnx
+
+# 운영 데이터(실제 스캔 사진·월드맵·모델·증거) — 저장소에 올리지 않는다
+backend/storage/
+logs/*.out
+logs/*.log

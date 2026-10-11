@@ -1,0 +1,3 @@
+asset_id,gt_dx_mm,gt_dy_mm,gt_dz_mm,gt_rot_deg,sys_dx_mm,sys_dy_mm,sys_dz_mm,sys_rot_deg,err_mm,err_deg,rmse_m,inlier_ratio,confidence,device,captured_at
+PUMP-301,,,,,,,,,,,,,,,
+COL-101,,,,,,,,,,,,,,,

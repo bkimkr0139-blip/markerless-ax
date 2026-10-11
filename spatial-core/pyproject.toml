@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spatial-core"
+version = "0.1.0"
+description = "Markerless inspection PoC core: coordinate frames, ICP registration, tolerance judgment, confidence"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "scipy>=1.11"]
+
+[project.optional-dependencies]
+# 공간 재구성(TSDF 메시 추출·텍스처 JPEG·AI 마스크). 모델 파일은 tools/fetch_models.sh
+reconstruction = ["scikit-image>=0.24", "Pillow>=10", "onnxruntime>=1.18"]
+# Week 3-4 이후 후보: OpenCV(PnP), Open3D(고급 ICP). 3.14 wheel 호환 확인 후 추가.
+# heavy = ["opencv-python>=4.10", "open3d>=0.19"]
+
+[tool.setuptools.packages.find]
+include = ["spatial_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
