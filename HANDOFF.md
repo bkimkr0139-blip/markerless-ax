@@ -5,6 +5,22 @@
 갱신: 2026-10-07 (**sudo 단계 전부 완료 확인** — 남은 것은 Xcode GUI 서명 + 실기기 실행뿐, §2)
 이 문서 하나면 어느 세션에서든 작업을 그대로 이어갈 수 있다.
 
+갱신: 2026-10-12 (**§0 최신 상태 추가** — 디지털 트윈 Sprint 0~7·스캔 품질 UI 완료, 실기기 테스트 진행 중. §1~5는 10월 초 기록이라 일부 낡음)
+
+## 0. 최신 상태 (2026-10-12)
+
+- 구현 완료: 공간 스캔 → TSDF/텍스처 메시 → 구조·커버리지 → 추정 외피 → 웹 투어 → CAD/설계 레이어 (`docs/INTERFACES.md`, `docs/ACCEPTANCE.md`).
+  테스트: spatial-core 84 + backend 83 = 167 통과. 보안(API 키·역할·CSRF·비밀번호 정책) 포함.
+- iOS: 스캔 품질 실시간 모니터링 UI(공간·사물) — `mobile-ios/SCAN_QUALITY_UI.md`. 하네스 4종(`mobile-ios/Tools/*_check.swift`) ALL OK.
+- 실기기: iPhone 13 Pro에 `tools/ios_install.sh "iPhone 13 Pro"`로 설치·동작 확인 중 (무선/유선 모두 가능). 테스트 절차 `docs/DEVICE_TEST_PLAN.md`.
+- 10-12 실기기 피드백 반영:
+  - 공간 스캔 하단 도크 버튼이 좌우 끝에서 가려짐 → 버튼마다 균등 폭 칸으로 변경 (`SpaceScanView.swift`, 사용자 확인 완료).
+  - 열 때문에 너무 일찍 멈춤 → 자동 일시정지·재개 거부 기준을 serious → critical로 상향 (`SpaceScanSession.pauseThermal`).
+    serious/fair에서는 해상도·간격만 낮추고 계속. 프레임 끊김·추적 이탈이 잦으면 기준을 되돌릴 것.
+- 서버: `make api` (8111, 0.0.0.0), 앱 기본 주소 http://192.168.2.105:8111, 외부 https://markerless.wizbase.ai.kr.
+- 미해결/미검증: 실기기 LiDAR 공간 스캔 품질 임계값 튜닝, RoomPlan, 장시간 열·메모리, 업로드 규모, 미등록 사물 오인 매칭(60%), 반 픽셀 규약(`tools/pixel_ab.py`로 A/B), 모바일 단일 API 키, PostgreSQL·워커 분리.
+- 다음: 실기기 로그(`backend/logs/dev.log`)로 품질 UI 임계값 튜닝 → `tools/twin_bench.py`로 회귀 확인.
+
 ## 1. 현재 상태 (2026-10-06 재부팅 복귀 후)
 
 **PoC 코드 전체 완성·검증 완료. iOS 앱 컴파일도 성공. 남은 것 = 코드 서명 + iPhone 실기기 실행뿐.**

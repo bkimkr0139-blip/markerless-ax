@@ -36,14 +36,28 @@ struct SpaceScanView: View {
                 }
                 if let n = ctl.notice { banner(n, "thermometer.medium", .yellow) }
                 if ctl.state == .recovery { recoveryCard }
+                if running { liveBar }
                 Spacer()
                 qualityPill
-                hud
+                SpaceQualityHUD(ctl: ctl)
                 hintLine
                 uploadCard
                 dock
             }
             .padding(.horizontal, 10).padding(.top, 6).padding(.bottom, 8)
+
+            SpaceEdgeGuide(ctl: ctl).padding(.vertical, 120)
+            if let t = ctl.toast {
+                Label(t, systemImage: "checkmark.circle.fill").font(.subheadline.weight(.bold)).foregroundStyle(.white)
+                    .padding(.horizontal, 16).padding(.vertical, 9)
+                    .background(CellState.ok.color.opacity(0.92), in: Capsule())
+                    .transition(.scale.combined(with: .opacity))
+                    .frame(maxHeight: .infinity, alignment: .center)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: ctl.toast)
+        .fullScreenCover(isPresented: $ctl.reviewOpen) {
+            SpaceReviewScreen(ctl: ctl, title: isFacility ? "시설물 스캔 점검" : "공간 스캔 점검")
         }
         .onAppear { ctl.screenAppeared() }
         .onDisappear { ctl.screenDisappeared() }
@@ -104,22 +118,11 @@ struct SpaceScanView: View {
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.orange, lineWidth: 1))
     }
 
-    // MARK: - 커버리지 HUD (방위 링: 바깥=벽, 가운데=천장, 안쪽=바닥. 위쪽이 지금 보는 방향)
+    // MARK: - 실시간 품질 바 (촬영 중에만; 대기 중엔 숨김)
 
-    private var hud: some View {
-        HStack(alignment: .center, spacing: 12) {
-            CoverageRing(grid: ctl.coverage, heading: ctl.heading)
-                .frame(width: 120, height: 120)
-            VStack(alignment: .leading, spacing: 4) {
-                bar("벽", ctl.coverage.wallFraction, .green)
-                bar("천장", ctl.coverage.ceilingFraction, .cyan)
-                bar("바닥", ctl.coverage.floorFraction, .yellow)
-                if ctl.lastExcluded > 0 { Text("제외한 프레임 \(ctl.lastExcluded)장").font(.caption2).foregroundStyle(.white.opacity(0.8)) }
-            }
-            .padding(10).background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            Spacer(minLength: 0)
-        }
-        .opacity(ctl.state == .idle && ctl.keyframeCount == 0 ? 0.7 : 1)
+    private var liveBar: some View {
+        let q = ctl.liveQuality
+        return LiveQualityBar(level: q?.level ?? .good, score: q?.score ?? 1, reasons: q?.reasons ?? [], distanceM: q?.distanceM)
     }
 
     // MARK: - 촬영 품질 알약 / 고화질 사진 토글
@@ -148,20 +151,9 @@ struct SpaceScanView: View {
                         Label("\(ctl.highResCount)", systemImage: "camera.aperture").foregroundStyle(.white)
                     }
                 }
-                .font(.caption2.monospacedDigit().weight(.semibold))
-                .padding(.horizontal, 10).padding(.vertical, 5).background(.black.opacity(0.6), in: Capsule())
+                .font(.system(size: 10).monospacedDigit().weight(.semibold))
+                .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.5), in: Capsule())
             }
-        }
-    }
-
-    private func bar(_ name: String, _ f: Float, _ tint: Color) -> some View {
-        HStack(spacing: 6) {
-            Text(name).font(.caption2.weight(.semibold)).foregroundStyle(.white).frame(width: 28, alignment: .leading)
-            ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.2)).frame(width: 90, height: 6)
-                Capsule().fill(tint).frame(width: 90 * CGFloat(f), height: 6)
-            }
-            Text("\(Int(f * 100))%").font(.caption2.monospacedDigit()).foregroundStyle(.white)
         }
     }
 
@@ -203,7 +195,7 @@ struct SpaceScanView: View {
     private var canStart: Bool { app.isSpaceSelected && ctl.canCapture }
 
     private var dock: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 0) {
             switch ctl.state {
             case .idle:
                 Button { ctl.begin(app: app) } label: { DockIcon(symbol: "record.circle", caption: "촬영 시작", tint: .red, active: true) }
@@ -211,15 +203,17 @@ struct SpaceScanView: View {
                 structureButton
             case .scanning, .recovery:
                 Button { ctl.pause() } label: { DockIcon(symbol: "pause.circle", caption: "일시정지") }
+                Button { ctl.openReview() } label: { DockIcon(symbol: "checklist", caption: "점검", tint: .cyan, active: true) }
                 Button { ctl.excludeRecent() } label: { DockIcon(symbol: "person.fill.xmark", caption: "구간 제외", tint: .orange, active: true) }
-                Button { ctl.finish() } label: { DockIcon(symbol: "checkmark.circle.fill", caption: "촬영 완료", tint: .green, active: true) }
+                Button { ctl.requestFinish() } label: { DockIcon(symbol: "checkmark.circle.fill", caption: "촬영 완료", tint: .green, active: true) }
             case .paused:
                 Button { ctl.resume() } label: { DockIcon(symbol: "play.circle.fill", caption: "이어서", tint: .red, active: true) }
                 Button { ctl.excludeRecent() } label: { DockIcon(symbol: "person.fill.xmark", caption: "구간 제외", tint: .orange, active: true) }
                 structureButton
-                Button { ctl.finish() } label: { DockIcon(symbol: "checkmark.circle.fill", caption: "촬영 완료", tint: .green, active: true) }
+                Button { ctl.openReview() } label: { DockIcon(symbol: "checklist", caption: "점검", tint: .cyan, active: true) }
+                Button { ctl.requestFinish() } label: { DockIcon(symbol: "checkmark.circle.fill", caption: "촬영 완료", tint: .green, active: true) }
             case .processing:
-                DockIcon(symbol: "gearshape.2", caption: "처리 중")
+                DockIcon(symbol: "gearshape.2", caption: "처리 중").frame(maxWidth: .infinity)
             case .ready, .needMoreCapture, .failed:
                 if ctl.state == .failed {
                     Button { ctl.retryUpload() } label: { DockIcon(symbol: "arrow.clockwise", caption: "다시 시도") }
@@ -229,6 +223,7 @@ struct SpaceScanView: View {
                 }
             }
         }
+        .buttonStyle(DockSlotStyle())
         .frame(maxWidth: .infinity)
     }
 
@@ -244,39 +239,11 @@ struct SpaceScanView: View {
     }
 }
 
-// MARK: - 방위 링
-
-struct CoverageRing: View {
-    let grid: SpaceCoverageGrid
-    let heading: Float
-
-    var body: some View {
-        Canvas { ctx, size in
-            let c = CGPoint(x: size.width / 2, y: size.height / 2)
-            let R = min(size.width, size.height) / 2
-            let n = SpaceCoverageGrid.sectors
-            // 바깥 = 벽(1), 가운데 = 천장(2), 안쪽 = 바닥(0)
-            let rings: [(band: Int, r0: CGFloat, r1: CGFloat, base: Color)] = [
-                (1, R * 0.70, R * 0.98, .green), (2, R * 0.44, R * 0.66, .cyan), (0, R * 0.18, R * 0.40, .yellow),
-            ]
-            ctx.fill(Path(ellipseIn: CGRect(x: c.x - R, y: c.y - R, width: R * 2, height: R * 2)), with: .color(.black.opacity(0.45)))
-            for ring in rings {
-                for s in 0..<n {
-                    // 위쪽 = 지금 보는 방향: 섹터 각도에서 heading을 뺀다 (0 = 위, 시계방향)
-                    let a0 = (Double(s) / Double(n)) * 2 * .pi - Double(heading) - .pi / 2 + 0.02
-                    let a1 = (Double(s + 1) / Double(n)) * 2 * .pi - Double(heading) - .pi / 2 - 0.02
-                    var p = Path()
-                    p.addArc(center: c, radius: ring.r1, startAngle: .radians(a0), endAngle: .radians(a1), clockwise: false)
-                    p.addArc(center: c, radius: ring.r0, startAngle: .radians(a1), endAngle: .radians(a0), clockwise: true)
-                    p.closeSubpath()
-                    let f = Double(grid.fill(band: ring.band, sector: s))
-                    ctx.fill(p, with: .color(f > 0 ? ring.base.opacity(0.25 + 0.7 * f) : Color.red.opacity(0.28)))
-                }
-            }
-            var needle = Path()
-            needle.move(to: c); needle.addLine(to: CGPoint(x: c.x, y: c.y - R))
-            ctx.stroke(needle, with: .color(.white), lineWidth: 2)
-        }
-        .accessibilityLabel("커버리지 링")
+/// 도크 버튼마다 같은 폭의 칸을 주어, 버튼 수가 달라도 화면 폭 안에서 고르게 나뉜다 (간격 고정 → 가장자리 잘림 방지)
+private struct DockSlotStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity)
+            .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

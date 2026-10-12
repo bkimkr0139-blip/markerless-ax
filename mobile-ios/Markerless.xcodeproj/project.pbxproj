@@ -24,6 +24,7 @@
 		46E612B337D6C7E59635425A /* StepGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186C3D7E3E9D9E7779AF71ED /* StepGuide.swift */; };
 		4B74CD86CA80BBB80B257AA7 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843BAE2A7AF9AE010A2D2D0D /* DebugLog.swift */; };
 		53AEDA96508337742E0D42A2 /* SurfelMesh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C991487D76DFCCB428F0D86 /* SurfelMesh.swift */; };
+		5AC9D668EDCB634A653AA447 /* SpaceQualityLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35BBB19DF42A07B8C21916A8 /* SpaceQualityLogic.swift */; };
 		6051FFD8D05AD4F40E563E1B /* DTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF07822C1DA42780A1F0DCE2 /* DTOs.swift */; };
 		6C80CCDC5DEAC16443E136F8 /* Keyframe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60558B3B6C9B0172ECADAEA3 /* Keyframe.swift */; };
 		73A6C9179577422FD96866FC /* InspectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931BBF70CCB32924AF95B042 /* InspectionView.swift */; };
@@ -33,11 +34,15 @@
 		87437D1E1431656B7003E0A1 /* PhotoCardBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1FA937646F214892C632C6 /* PhotoCardBuilder.swift */; };
 		879C68DDF56F5CD4A98817B7 /* GLBWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7EE0BB245516B2076295A82 /* GLBWriter.swift */; };
 		9A83326BA71C8A85617F2043 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B8AE26DFA68BCDD1BC1691 /* BuildInfo.swift */; };
+		9C8308294E347A5102AB4CB2 /* ObjectScanOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDC8CBDC403BDC5D01DBC59 /* ObjectScanOverlay.swift */; };
 		9CAA1163A7FBA457ECA1B69D /* ScanCoverage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FFAEA10F1852026707F249 /* ScanCoverage.swift */; };
+		A8950EC8799BCB030783D7E7 /* SpaceScanQualityHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA33187E670A29AF77C59F13 /* SpaceScanQualityHUD.swift */; };
 		C347178DB7F5F52F64109BE7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998C114BE3CD769704DAD639 /* AppState.swift */; };
 		C44103ABAB87B70FD12602D4 /* AssetManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE9FA55666BDF594C86EBB1 /* AssetManagerView.swift */; };
+		CC0C29A35CAD73534F7B5E12 /* ScanQualityKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EA68C8C42CD7DE774746E69 /* ScanQualityKit.swift */; };
 		E0C3A9568B1AF548575A6920 /* SpacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0DCA9986473BF69A8BBAA7C /* SpacesView.swift */; };
 		E511971066A86D019149DE73 /* DepthFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D116C745779364917E2ACF /* DepthFusion.swift */; };
+		E86D455DE8DEE50243FD17F8 /* ScanQualityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AF8ACA84E2ADD524C18B22 /* ScanQualityViews.swift */; };
 		E88FB4AA03CC1DDC34A4C25F /* PoseRefiner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172CEDE73D94A0CF7C814135 /* PoseRefiner.swift */; };
 		EC5BB8312D901EE5EADA2435 /* OutlineViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 994A6BCB3F44650F49A4F827 /* OutlineViews.swift */; };
 		EDA01EADFE9DD9C2F94DA2E1 /* ScanAssetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6E8793FF8C52C8DB163CC2A /* ScanAssetView.swift */; };
@@ -48,8 +53,10 @@
 		172CEDE73D94A0CF7C814135 /* PoseRefiner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseRefiner.swift; sourceTree = "<group>"; };
 		186C3D7E3E9D9E7779AF71ED /* StepGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepGuide.swift; sourceTree = "<group>"; };
 		1BFC1E501FD368651DD94F36 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1EA68C8C42CD7DE774746E69 /* ScanQualityKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanQualityKit.swift; sourceTree = "<group>"; };
 		329D61D58F3BBDD77887B3E5 /* MarkerlessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkerlessApp.swift; sourceTree = "<group>"; };
 		32B8AE26DFA68BCDD1BC1691 /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		35BBB19DF42A07B8C21916A8 /* SpaceQualityLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceQualityLogic.swift; sourceTree = "<group>"; };
 		3CE9FA55666BDF594C86EBB1 /* AssetManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetManagerView.swift; sourceTree = "<group>"; };
 		3D1FA937646F214892C632C6 /* PhotoCardBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCardBuilder.swift; sourceTree = "<group>"; };
 		4195F22282DF28B74E8C1667 /* EngineeringOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineeringOverlay.swift; sourceTree = "<group>"; };
@@ -72,6 +79,7 @@
 		9B9110ADC5FDF8EC0058663B /* ResultBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultBanner.swift; sourceTree = "<group>"; };
 		A7EE0BB245516B2076295A82 /* GLBWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GLBWriter.swift; sourceTree = "<group>"; };
 		B439DEB960CD33CC2E739EA9 /* SpaceScanSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceScanSession.swift; sourceTree = "<group>"; };
+		BA33187E670A29AF77C59F13 /* SpaceScanQualityHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceScanQualityHUD.swift; sourceTree = "<group>"; };
 		C566C97CB804D0DD53AE5DF5 /* CardThumbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardThumbView.swift; sourceTree = "<group>"; };
 		C5803D1413E82D198B63BB00 /* Markerless.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Markerless.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6E8793FF8C52C8DB163CC2A /* ScanAssetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanAssetView.swift; sourceTree = "<group>"; };
@@ -82,6 +90,8 @@
 		EAFD0AC9F909B76E5D7DD188 /* SpaceScanLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceScanLogic.swift; sourceTree = "<group>"; };
 		EF07822C1DA42780A1F0DCE2 /* DTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTOs.swift; sourceTree = "<group>"; };
 		F0DCA9986473BF69A8BBAA7C /* SpacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesView.swift; sourceTree = "<group>"; };
+		F1AF8ACA84E2ADD524C18B22 /* ScanQualityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanQualityViews.swift; sourceTree = "<group>"; };
+		FBDC8CBDC403BDC5D01DBC59 /* ObjectScanOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectScanOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -99,6 +109,8 @@
 				172CEDE73D94A0CF7C814135 /* PoseRefiner.swift */,
 				DCDC68B9E12D6D112E0CC0ED /* RoomPlanPass.swift */,
 				50FFAEA10F1852026707F249 /* ScanCoverage.swift */,
+				1EA68C8C42CD7DE774746E69 /* ScanQualityKit.swift */,
+				35BBB19DF42A07B8C21916A8 /* SpaceQualityLogic.swift */,
 				EAFD0AC9F909B76E5D7DD188 /* SpaceScanLogic.swift */,
 				B439DEB960CD33CC2E739EA9 /* SpaceScanSession.swift */,
 				4C991487D76DFCCB428F0D86 /* SurfelMesh.swift */,
@@ -132,11 +144,14 @@
 				3CE9FA55666BDF594C86EBB1 /* AssetManagerView.swift */,
 				C566C97CB804D0DD53AE5DF5 /* CardThumbView.swift */,
 				931BBF70CCB32924AF95B042 /* InspectionView.swift */,
+				FBDC8CBDC403BDC5D01DBC59 /* ObjectScanOverlay.swift */,
 				994A6BCB3F44650F49A4F827 /* OutlineViews.swift */,
 				9B9110ADC5FDF8EC0058663B /* ResultBanner.swift */,
 				C6E8793FF8C52C8DB163CC2A /* ScanAssetView.swift */,
 				71F5A6F5DA3E6A6CFA297919 /* ScanHubView.swift */,
 				CBF5B3565625578C919DB678 /* ScanHUD.swift */,
+				F1AF8ACA84E2ADD524C18B22 /* ScanQualityViews.swift */,
+				BA33187E670A29AF77C59F13 /* SpaceScanQualityHUD.swift */,
 				4DD7F32DF4E0EB0927105A9D /* SpaceScanView.swift */,
 				F0DCA9986473BF69A8BBAA7C /* SpacesView.swift */,
 				186C3D7E3E9D9E7779AF71ED /* StepGuide.swift */,
@@ -297,6 +312,7 @@
 				6C80CCDC5DEAC16443E136F8 /* Keyframe.swift in Sources */,
 				14EFA655F735168CCEF47EAD /* LocationProvider.swift in Sources */,
 				7E65C2AF3BFBB4387244FB1A /* MarkerlessApp.swift in Sources */,
+				9C8308294E347A5102AB4CB2 /* ObjectScanOverlay.swift in Sources */,
 				EC5BB8312D901EE5EADA2435 /* OutlineViews.swift in Sources */,
 				87437D1E1431656B7003E0A1 /* PhotoCardBuilder.swift in Sources */,
 				E88FB4AA03CC1DDC34A4C25F /* PoseRefiner.swift in Sources */,
@@ -307,7 +323,11 @@
 				9CAA1163A7FBA457ECA1B69D /* ScanCoverage.swift in Sources */,
 				3C2749573D58759B9FB01381 /* ScanHUD.swift in Sources */,
 				327F779BC2502ED6E6E3D913 /* ScanHubView.swift in Sources */,
+				CC0C29A35CAD73534F7B5E12 /* ScanQualityKit.swift in Sources */,
+				E86D455DE8DEE50243FD17F8 /* ScanQualityViews.swift in Sources */,
+				5AC9D668EDCB634A653AA447 /* SpaceQualityLogic.swift in Sources */,
 				2144E67945ECA6A58A0AC4AC /* SpaceScanLogic.swift in Sources */,
+				A8950EC8799BCB030783D7E7 /* SpaceScanQualityHUD.swift in Sources */,
 				18EB636D362F6B1C78608B85 /* SpaceScanSession.swift in Sources */,
 				77E0D104E83489A6A7375D10 /* SpaceScanView.swift in Sources */,
 				E0C3A9568B1AF548575A6920 /* SpacesView.swift in Sources */,

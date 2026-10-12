@@ -8,6 +8,8 @@ OpenCV 카메라(x 오른쪽, y 아래, z 전방) = ARKit 카메라의 (X, −Y,
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -27,12 +29,26 @@ def to_mat16(T: np.ndarray) -> list[float]:
     return [float(x) for x in np.asarray(T, dtype=np.float64).T.reshape(-1)]
 
 
+def pixel_offset() -> float:
+    """기기가 보내는 intrinsics의 픽셀 규약. 0.5(기본) = cx,cy가 이미지 좌상단 *모서리* 기준(픽셀 i 중심 = i+0.5).
+    0 = cx,cy가 좌상단 픽셀의 *중심* 기준(픽셀 i 중심 = i). 실기기 ARKit이 어느 쪽인지 현장에서 A/B로 가린다:
+    서버를 MARKERLESS_PIXEL_OFFSET=0 으로 띄워 같은 방을 재구성해 벽 두께(층 번짐)가 더 얇은 쪽을 쓴다 (docs/DEVICE_TEST_PLAN.md)."""
+    try:
+        return float(os.environ.get("MARKERLESS_PIXEL_OFFSET", "0.5"))
+    except ValueError:
+        return 0.5
+
+
 def intrinsics3(vals) -> np.ndarray:
-    """열 우선 3×3 [fx,0,0, 0,fy,0, cx,cy,1] → K (행렬)."""
+    """열 우선 3×3 [fx,0,0, 0,fy,0, cx,cy,1] → K (행렬). 내부 표준(모서리 원점)으로 변환해 돌려준다."""
     a = np.asarray(vals, dtype=np.float64)
     if a.size != 9:
         raise ValueError("intrinsics는 9개 값이어야 합니다")
-    return a.reshape(3, 3).T
+    K = a.reshape(3, 3).T.copy()
+    shift = 0.5 - pixel_offset()  # 중심 원점(0) → 모서리 원점(0.5) 환산: +0.5
+    K[0, 2] += shift
+    K[1, 2] += shift
+    return K
 
 
 @dataclass

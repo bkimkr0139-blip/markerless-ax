@@ -179,3 +179,21 @@ def test_depth_prior_model_runs():
     rgb = (np.random.default_rng(0).random((120, 160, 3)) * 255).astype(np.uint8)
     rel = DepthPrior().relative(rgb)
     assert rel.shape == (120, 160) and np.isfinite(rel).all()
+
+
+def test_pixel_offset_switch_is_equivalent(monkeypatch):
+    """MARKERLESS_PIXEL_OFFSET=0(중심 원점 intrinsics)로 같은 장면을 올려도 결과가 같다 — 실기기 규약 A/B용 스위치 검증."""
+    from spatial_core.reconstruction.camera import intrinsics3
+
+    room = SynthRoom(size=(5, 2.7, 4))
+    base = orbit_frames(room, n=50)
+    ref = base[0].K_rgb
+    corner_vals = [ref[0, 0], 0, 0, 0, ref[1, 1], 0, ref[0, 2], ref[1, 2], 1]  # 모서리 원점(표준)
+    center_vals = [ref[0, 0], 0, 0, 0, ref[1, 1], 0, ref[0, 2] - 0.5, ref[1, 2] - 0.5, 1]  # 같은 카메라를 중심 원점으로 표현
+    monkeypatch.delenv("MARKERLESS_PIXEL_OFFSET", raising=False)
+    assert np.allclose(intrinsics3(corner_vals), ref)
+    monkeypatch.setenv("MARKERLESS_PIXEL_OFFSET", "0")
+    assert np.allclose(intrinsics3(center_vals), ref)
+    assert not np.allclose(intrinsics3(corner_vals), ref), "잘못된 규약으로 읽으면 반픽셀 어긋난다(스위치가 실제로 동작)"
+    monkeypatch.setenv("MARKERLESS_PIXEL_OFFSET", "abc")  # 잘못된 값은 기본값으로
+    assert np.allclose(intrinsics3(corner_vals), ref)

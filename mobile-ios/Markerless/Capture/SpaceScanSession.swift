@@ -113,6 +113,9 @@ struct SpaceSessionRecord: Codable, Identifiable {
     var createdAt = Date()
     var segmentCount = 1
     var excludedCount = 0
+    /// 품질 격자(링 3 × 섹터 24)와 시작 방위 — 앱이 죽어도 session.json에 남아 디브리핑/복원에 쓴다 (옵셔널: 옛 세션과 호환)
+    var grid: QualityGrid?
+    var startHeadingRad: Float?
 }
 
 enum SpaceScanStore {
@@ -403,7 +406,16 @@ final class SpaceScanController: ObservableObject {
     @Published private(set) var segmentIndex = 0
     @Published private(set) var keyframeCount = 0
     @Published private(set) var storedMB: Double = 0
-    @Published private(set) var coverage = SpaceCoverageGrid()
+    // ── 품질 격자·실시간 품질 (ScanQualityKit) — 링 0 바닥 / 1 벽 / 2 천장
+    @Published private(set) var grid = SpaceGridMap.newGrid()
+    @Published private(set) var liveQuality: LiveSnapshot?
+    @Published private(set) var viewRing = 1  // 지금 카메라가 보는 띠 (EdgeGuide 위/아래 판단)
+    @Published private(set) var guideCell: GuideCell?  // 화살표가 가리킬 칸 (재스캔 목표 > 가장 가까운 문제)
+    @Published private(set) var target: RescanTarget?  // [부족한 곳 다시 스캔] 목표 구간
+    @Published private(set) var toast: String?
+    @Published var reviewOpen = false  // 완료 전 점검 화면
+    @Published private(set) var startHeadingRad: Float = 0
+    var overallProgress: Float { grid.overall(weights: [1, 2, 1]) }
     @Published private(set) var hint = "시작을 누르고 천천히 방 안을 둘러보세요"
     @Published private(set) var recoveryText = ""
     @Published private(set) var notice: String?  // 열/메모리/디스크 적응 안내
@@ -440,6 +452,13 @@ final class SpaceScanController: ObservableObject {
     private var prevTs: TimeInterval = 0
     private var lowMemory = false
     private var lastHintAt: TimeInterval = 0
+    private var lastQSample: TimeInterval = 0
+    private var lastGuideAt: TimeInterval = 0
+    private var levelFilter = LevelFilter()
+    private var sampleLog = SampleLog()
+    private var lastCandBlur: Float = 0
+    private var lastCandBlurAt: TimeInterval = -10
+    private var toastSeq = 0
     private let maxFrames = 2500
 
     // 품질 로직 상태
@@ -503,15 +522,19 @@ final class SpaceScanController: ObservableObject {
         record = SpaceSessionRecord(id: id, spaceNumericId: app.spaceNumericId, spaceCode: app.spaceId, create: create)
         recordId = id
         stubs.removeAll(); nextIndex = 0; bytes = 0; keyframeCount = 0; storedMB = 0
-        coverage = SpaceCoverageGrid(); gate = KeyframeGate(); segmentIndex = 0
+        resetGrid(); gate = KeyframeGate(); segmentIndex = 0
         resetQuality()
         state = .idle
+        record?.grid = grid
         SpaceScanStore.save(record!)
     }
 
     func begin(app: AppState) {
         guard app.isSpaceSelected, canCapture else { return }
         ensureRecord(app: app)
+        if record?.startHeadingRad == nil { record?.startHeadingRad = heading }
+        startHeadingRad = record?.startHeadingRad ?? heading
+        levelFilter.reset(); liveQuality = nil
         aux.start()
         hasHadNormal = false; lossStart = nil; interrupted = false; prevT = nil
         gate.startSegment(); segmentIndex = gate.segmentIndex
@@ -544,11 +567,12 @@ final class SpaceScanController: ObservableObject {
 
     func resume() {
         guard state == .paused else { return }
-        if thermal.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
+        if thermal.rawValue >= Self.pauseThermal.rawValue {
             notice = "기기가 아직 뜨겁습니다 — 식을 때까지 잠시 기다린 뒤 [이어서]를 눌러 주세요"
             return
         }
         depthRing.reset(); picker.reset()
+        levelFilter.reset(); liveQuality = nil
         gate.startSegment()  // 멈춘 동안 이동했을 수 있다 → 새 구간으로 이어 촬영
         segmentIndex = gate.segmentIndex
         prevT = nil; lossStart = nil; notice = nil
@@ -564,9 +588,9 @@ final class SpaceScanController: ObservableObject {
         guard !drop.isEmpty else { return }
         for s in drop { SpaceFrameWriter.delete(sessionId: id, index: s.index) }
         stubs.removeAll { $0.t >= cut }
-        var cov = SpaceCoverageGrid()
-        for s in stubs { cov.add(forward: s.fwd) }  // 남은 프레임으로 커버리지를 다시 계산
-        coverage = cov
+        var g = grid
+        sampleLog.rollback(since: cut, grid: &g)  // 지운 구간의 격자 표본을 되돌린다 (최근 15초 로그 범위)
+        grid = g
         keyframeCount = stubs.count
         lastExcluded = drop.count
         record?.excludedCount += drop.count
@@ -578,6 +602,8 @@ final class SpaceScanController: ObservableObject {
     /// 촬영 종료 → 업로드 대기열 등록. 쓰기 중인 프레임이 끝나길 잠시 기다린다.
     func finish() {
         guard record != nil, state == .scanning || state == .paused || state == .recovery || state == .idle else { return }
+        reviewOpen = false
+        logGridSummary()
         state = .processing
         aux.stop()
         UIApplication.shared.isIdleTimerDisabled = false
@@ -588,6 +614,7 @@ final class SpaceScanController: ObservableObject {
             r.frameIndices = self.stubs.map(\.index).sorted()
             r.captureFinished = true
             r.endedReason = "USER_FINISHED"
+            r.grid = self.grid
             r.segmentCount = self.gate.segmentIndex + 1
             self.record = r
             SpaceScanStore.save(r)
@@ -600,7 +627,7 @@ final class SpaceScanController: ObservableObject {
     func startOver() {
         record = nil; recordId = nil; progress = nil; serverMessage = nil
         stubs.removeAll(); nextIndex = 0; keyframeCount = 0; storedMB = 0
-        coverage = SpaceCoverageGrid(); gate = KeyframeGate(); segmentIndex = 0
+        resetGrid(); gate = KeyframeGate(); segmentIndex = 0
         resetQuality()
         state = .idle; notice = nil
         hint = "시작을 누르고 천천히 방 안을 둘러보세요"
@@ -644,6 +671,9 @@ final class SpaceScanController: ObservableObject {
         }
     }
 
+    /// 이 단계 이상이면 자동 일시정지·재개 거부. serious는 iOS가 곧 성능을 깎는 단계이지만 촬영은 가능하므로
+    /// 해상도·간격만 낮추고 계속하고, critical에서만 멈춘다.
+    private static let pauseThermal = ProcessInfo.ThermalState.critical
     private var thermal: ProcessInfo.ThermalState { ProcessInfo.processInfo.thermalState }
 
     private func handle(_ frame: ARFrame) {
@@ -707,10 +737,11 @@ final class SpaceScanController: ObservableObject {
             segmentIndex = gate.segmentIndex
             DebugLog.log("space", "추적 점프/재위치 → 구간 \(segmentIndex)")
         }
+        sampleQuality(frame, fwd: fwd, az: az, lin: lin, ang: ang, normal: normal, now: now)  // 저장 키프레임과 무관하게 매 프레임(≈10Hz)
         guard state == .scanning, normal else { picker.reset(); depthRing.reset(); windowMaxSharp = 0; return }
 
         // 열: serious 이상이면 자동 일시정지 (이미 큐에 들어간 프레임 저장·업로드는 계속된다)
-        if thermal.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
+        if thermal.rawValue >= Self.pauseThermal.rawValue {
             pause()
             notice = "기기가 매우 뜨거워 자동 일시정지했습니다 — 저장된 프레임은 안전합니다. 식은 뒤 [이어서]를 누르세요"
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
@@ -726,12 +757,9 @@ final class SpaceScanController: ObservableObject {
             depthRing.reset()
         }
 
-        // 힌트 갱신 (2Hz) — 흔들림 안내가 떠 있는 동안은 덮어쓰지 않는다
-        if now - lastHintAt > 0.5, now >= blurHintUntil { lastHintAt = now; hint = coverage.hint(headingRad: az) }
-
         // 적응: 열/메모리
         let hot = thermal.rawValue >= ProcessInfo.ThermalState.fair.rawValue
-        if hot { notice = "기기 온도 상승 — 해상도·간격을 낮췄습니다" }
+        if hot { notice = "기기 온도 상승 — 해상도·간격을 낮춰 계속합니다" }
         let minInterval: TimeInterval = hot || lowMemory ? 0.6 : 0.25
         let maxEdge = (hot || lowMemory) ? 1280 : 1920
         gate.minMoveM = hot || lowMemory ? 0.25 : 0.15
@@ -754,6 +782,7 @@ final class SpaceScanController: ObservableObject {
         let sharp = SpaceFrameWriter.sharpness(of: frame.capturedImage)
         windowMaxSharp = max(windowMaxSharp, sharp)
         let blur = SharpnessMath.combine(speedBlur: speedBlur, sharpBlur: SharpnessMath.sharpBlur(sharpness: sharp, reference: sharpRef))
+        lastCandBlur = blur; lastCandBlurAt = now
         guard let win = picker.offer(Candidate(frame: frame, blur: blur, sharp: sharp), score: blur, at: now) else { return }
 
         // 창 종료 — 가장 선명한 후보를 확정하거나, 전부 흐리면 거절
@@ -785,7 +814,6 @@ final class SpaceScanController: ObservableObject {
         let idx = nextIndex; nextIndex += 1
         let fwd = simd_normalize(-SIMD3<Float>(t.columns.2.x, t.columns.2.y, t.columns.2.z))
         stubs.append(Stub(index: idx, t: frame.timestamp, fwd: fwd))
-        if coverage.add(forward: fwd) { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
         keyframeCount = stubs.count
         inFlight += 1
 
@@ -889,10 +917,138 @@ final class SpaceScanController: ObservableObject {
         }
     }
 
+    // MARK: 품질 격자 · 실시간 품질
+
+    struct LiveSnapshot: Equatable {
+        var level: QualityLevel
+        var score: Float
+        var reasons: [QualityReason]
+        var distanceM: Float?
+    }
+
+    private func resetGrid() {
+        grid = SpaceGridMap.newGrid(); sampleLog.reset(); target = nil; guideCell = nil
+        liveQuality = nil; levelFilter.reset(); toast = nil; reviewOpen = false
+    }
+
+    /// 프레임마다 호출. 0.1초 간격(≈10Hz)으로만 실제 계산: 중앙 깊이 창 통계 → LiveQuality → 격자 표본(+FOV 이웃).
+    /// 비용: 깊이 맵(256×192) 중앙 40% 창을 stride 2로 훑어 ~2천 표본(정렬 포함 <0.3ms 예상 — 실기기 계측 필요).
+    private func sampleQuality(_ frame: ARFrame, fwd: SIMD3<Float>, az: Float, lin: Float, ang: Float,
+                               normal: Bool, now: TimeInterval) {
+        if let c = SpaceGridMap.cell(forward: fwd), c.ring != viewRing { viewRing = c.ring }
+        guard now - lastQSample >= 0.1 else { return }
+        lastQSample = now
+
+        var inp = LiveQuality.Input()
+        inp.speedMPerS = lin; inp.angRadPerS = ang
+        let speedBlur = KeyframeGate.blurScore(angularRadPerS: ang, linearMPerS: lin,
+                                               exposureS: frame.camera.exposureDuration > 0 ? Float(frame.camera.exposureDuration) : nil,
+                                               fxPx: frame.camera.intrinsics[0][0])
+        inp.blur = max(speedBlur, now - lastCandBlurAt < 0.6 ? lastCandBlur : 0)  // 선명도 기반 결합 블러(최근 후보)가 있으면 반영
+        inp.trackingNormal = normal
+        if let sd = frame.sceneDepth, let st = DepthWindowStats.compute(depthMap: sd.depthMap, confidenceMap: sd.confidenceMap) {
+            inp.distanceM = st.medianM; inp.depthConf = st.meanConf; inp.depthValid = st.validRatio
+        }
+        inp.ambient = frame.lightEstimate.map { Float($0.ambientIntensity) }
+        let out = LiveQuality.evaluate(inp, profile: .space)
+        if let ch = levelFilter.push(out), ch.worse { ScanHaptics.qualityBad() }
+        let snap = LiveSnapshot(level: levelFilter.level, score: levelFilter.score, reasons: levelFilter.reasons, distanceM: inp.distanceM)
+        if let o = liveQuality, o.level == snap.level, o.reasons == snap.reasons, abs(o.score - snap.score) < 0.02,
+           abs((o.distanceM ?? -1) - (snap.distanceM ?? -1)) < 0.05 {} else { liveQuality = snap }
+
+        // 격자: 추적 정상 + 촬영 중일 때만 (복구 중·일시정지 제외)
+        if normal, state == .scanning {
+            let ringBefore = SpaceGridMap.cell(forward: fwd).map { grid.progress(ring: $0.ring) } ?? 0
+            var g = grid
+            let hits = SpaceGridMap.add(to: &g, forward: fwd, quality: out.score)
+            grid = g
+            sampleLog.append(t: now, hits: hits)
+            if hits.contains(where: { $0.old < .ok && $0.new >= .ok }) { ScanHaptics.cellFilled() }
+            if let h = hits.first, ringBefore < 1, g.progress(ring: h.ring) >= 1 { ScanHaptics.complete() }
+            if let t = target, t.satisfied(in: g) {
+                target = nil
+                ScanHaptics.complete()
+                showToast("채워졌어요")
+                refreshGuide(az: az, now: now, force: true)
+            }
+        }
+        refreshGuide(az: az, now: now, force: false)
+    }
+
+    /// 안내 대상 칸·힌트 문구 갱신 (2Hz). 흔들림 안내가 떠 있는 동안은 문구를 덮어쓰지 않는다.
+    private func refreshGuide(az: Float, now: TimeInterval, force: Bool) {
+        guard force || now - lastGuideAt >= 0.5 else { return }
+        lastGuideAt = now
+        let cell = SpaceGuide.pick(grid: grid, headingRad: az, target: target)
+        if cell != guideCell { guideCell = cell }
+        if now >= blurHintUntil {
+            let h = SpaceGuide.hint(grid: grid, headingRad: az, viewRing: viewRing, target: target, facility: mode == "FACILITY")
+            if h != hint { hint = h }
+        }
+    }
+
+    private func showToast(_ s: String) {
+        toastSeq += 1
+        let id = toastSeq
+        toast = s
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if self.toastSeq == id { self.toast = nil }
+        }
+    }
+
+    // MARK: 완료 전 점검 / 재스캔
+
+    var reviewItems: [ProblemDescriptor] { SpaceReview.items(grid, startHeadingRad: startHeadingRad) }
+    var canReview: Bool { (state == .scanning || state == .paused || state == .recovery) && record != nil }
+
+    /// [촬영 완료]: 빠진 곳/낮은 품질이 있거나 전체 80% 미만이면 바로 올리지 않고 점검 화면을 먼저 보여 준다.
+    func requestFinish() {
+        guard canReview else { return finish() }
+        if SpaceReview.needsReview(grid) { openReview() } else { finish() }
+    }
+
+    /// 수동 [점검] — 촬영을 잠시 멈추고 점검 화면
+    func openReview() {
+        guard canReview else { return }
+        if isActive { pause() }
+        reviewOpen = true
+    }
+
+    /// 점검 화면에서 [부족한 곳 다시 스캔]. '품질 낮음' 칸은 비워서 새로 평가받게 한다.
+    func rescan(_ item: ProblemDescriptor?) {
+        reviewOpen = false
+        guard let it = item else { if state == .paused { resume() }; return }
+        var g = grid
+        for s in it.sectors where g.state(it.ring, s) == .low { g.clear(ring: it.ring, sector: s) }
+        grid = g; sampleLog.reset()
+        target = RescanTarget(ring: it.ring, sectors: it.sectors)
+        refreshGuide(az: heading, now: lastGuideAt + 1, force: true)
+        if state == .paused { resume() }
+        DebugLog.log("space-scan", "재스캔 목표 \(it.title)")
+    }
+
+    func cancelTarget() { target = nil; refreshGuide(az: heading, now: lastGuideAt + 1, force: true) }
+
+    /// finish 시 한 줄 요약 — 내일 실기기 디브리핑용
+    private func logGridSummary() {
+        let pr = (0..<3).map { Int((grid.progress(ring: $0) * 100).rounded()) }
+        let probs = grid.problems().count
+        let mq = SpaceGridMap.meanQuality(grid)
+        let sharp = qualitySharpRatio
+        DebugLog.log("space-scan", "격자 요약 바닥 \(pr[0])% 벽 \(pr[1])% 천장 \(pr[2])% · 문제 \(probs)곳 · 평균품질 \(mq.map { String(format: "%.2f", $0) } ?? "-") · 선명 \(sharp.map { "\(Int($0 * 100))%" } ?? "-")",
+                     extra: ["floor": "\(pr[0])", "wall": "\(pr[1])", "ceiling": "\(pr[2])", "problems": "\(probs)",
+                             "overall": String(format: "%.2f", overallProgress),
+                             "meanQuality": mq.map { String(format: "%.2f", $0) } ?? "-",
+                             "sharpRatio": sharp.map { String(format: "%.2f", $0) } ?? "-",
+                             "mode": mode, "frames": "\(keyframeCount)"])
+    }
+
     private func persist() {
         guard var r = record else { return }
         r.frameIndices = stubs.map(\.index).sorted()
         r.segmentCount = gate.segmentIndex + 1
+        r.grid = grid
         record = r
         SpaceScanStore.save(r)
     }

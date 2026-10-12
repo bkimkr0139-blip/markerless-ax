@@ -251,6 +251,8 @@ BIM/CAD가 없어 스캔으로 만든 임시 자산에 **사진 기반 흑백 �
 | `tools/fetch_models.sh [--depth]` | AI 모델(선택) |
 | `tools/pwchange_check.py` | 비밀번호 강제 변경 화면 점검(`MARKERLESS_ENFORCE_PW_CHANGE=1` 서버) |
 | `tools/backup.sh` | DB·저장소 백업(보관 14개) |
+| `tools/twin_stress.py <base>` | 동시 업로드·읽기 부하 시험(임시 서버) |
+| `tools/pixel_ab.py <sessionId>` | 실기기 스캔으로 픽셀 규약(0.5/0) A/B 판정 |
 
 **비밀번호 강제 변경**: 운영 서버(`make api`)는 기본/약한 비밀번호 계정이 로그인하면 변경 화면만 열린다. 로컬 검증 서버·테스트는 `MARKERLESS_ENFORCE_PW_CHANGE=0`.
 기존 UI 점검 도구(`ui_check.py` 등)를 운영 서버에 쓰려면 먼저 비밀번호를 바꾸고 인자로 넘기거나, 임시 서버(`twin_server.sh`)를 쓴다.

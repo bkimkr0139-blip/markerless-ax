@@ -87,13 +87,17 @@ struct DomeMap: View {
 
 // MARK: - 상단 스캔 썸네일
 
-/// 스캔된 점이 채워지는 모습(위에서 본 점 이미지) + 둘레 지도. 탭하면 크게/작게.
+/// 스캔된 점이 채워지는 모습(위에서 본 점 이미지) + 품질 링 지도(QualityRing). 탭하면 크게/작게.
+/// 링: 바깥 = 둘레(옆·비스듬 합산, 방위는 사람의 왼쪽으로 늘어남 → mirror), 안쪽 = 윗면. 가운데 숫자 = 둘레 진행 %.
+/// 칸 색: 빨강 비어 있음 / 주황 품질 낮음 / 초록 양호 / 민트 좋음. 흰 점 = 지금 카메라, 맥박 테두리 = 다음 목표.
 struct ScanThumbnail: View {
     let data: ScanSessionController.ThumbData
-    var targetSector: Int?
+    var target: (ring: Int, sector: Int)?
     @Binding var expanded: Bool
 
     var body: some View {
+        let cov = data.coverage
+        let g = cov.reviewGrid
         HStack(spacing: 6) {
             if expanded {
                 VStack(spacing: 1) {
@@ -104,9 +108,11 @@ struct ScanThumbnail: View {
                 }
             }
             VStack(spacing: 1) {
-                DomeMap(coverage: data.coverage, camSector: data.camSector, targetSector: targetSector)
-                    .frame(width: expanded ? 84 : 52, height: expanded ? 84 : 52)
-                Text("돈 방향").font(.system(size: 8)).foregroundStyle(.secondary)
+                QualityRing(grid: g, specs: RingSpec.object, viewSector: data.camSector, target: target, mirror: true,
+                            percent: g.progress(ring: 0), caption: "둘레")
+                    .frame(width: expanded ? 96 : 60, height: expanded ? 96 : 60)
+                Text("윗면 \(Int((g.progress(ring: 1) * 100).rounded()))%")
+                    .font(.system(size: 8, weight: .semibold)).foregroundStyle(.secondary)
             }
         }
         .padding(6)

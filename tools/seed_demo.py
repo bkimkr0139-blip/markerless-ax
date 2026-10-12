@@ -60,7 +60,7 @@ def main():
 
     # 사용자
     for u, dn, role in [("kim.inspector", "김현장", "inspector"), ("park.tech", "박조치", "inspector"), ("lee.manager", "이소장", "manager"), ("view.client", "발주처 열람", "viewer")]:
-        admin.post("/admin/api/users", json={"username": u, "displayName": dn, "role": role, "password": "demo12345"})
+        admin.post("/admin/api/users", json={"username": u, "displayName": dn, "role": role, "password": "Demo-Pass-2026x"})
 
     # 자산 등록 (단말이 보낸 것처럼 deviceId 포함)
     specs = [("PUMP-301", "1호기 급수펌프", "설비", T._l_object(rng), (0.10, 0, 0.05), sp1["id"], "iPhone Air · 김현장"),
@@ -117,9 +117,9 @@ def main():
         print("검수(고정):", aid, r.json().get("result", {}).get("decision"))
 
     # 이슈 워크플로우 진행 상태를 다양하게
-    ins = httpx.Client(base_url=BASE, timeout=60, headers=H); login(ins, "kim.inspector", "demo12345")
-    mgr = httpx.Client(base_url=BASE, timeout=60, headers=H); login(mgr, "lee.manager", "demo12345")
-    tech = httpx.Client(base_url=BASE, timeout=60, headers=H); login(tech, "park.tech", "demo12345")
+    ins = httpx.Client(base_url=BASE, timeout=60, headers=H); login(ins, "kim.inspector", "Demo-Pass-2026x")
+    mgr = httpx.Client(base_url=BASE, timeout=60, headers=H); login(mgr, "lee.manager", "Demo-Pass-2026x")
+    tech = httpx.Client(base_url=BASE, timeout=60, headers=H); login(tech, "park.tech", "Demo-Pass-2026x")
 
     def tr(c, iid, to, **kw):
         r = c.post(f"/admin/api/issues/{iid}/transition", json={"to": to, **kw}); assert r.status_code == 200, r.text

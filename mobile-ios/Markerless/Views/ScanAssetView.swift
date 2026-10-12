@@ -54,6 +54,13 @@ struct ScanAssetView: View {
     @State private var lastLiveCount = 0
     @State private var lastLiveAt = Date.distantPast
     @State private var guideExpanded = false
+    // 실시간 품질·누락 안내 (0.25초마다 갱신)
+    @State private var live: LiveSnapshot?
+    @State private var guide: ScanCoverage.Guidance?
+    @State private var ringTarget: (ring: Int, sector: Int)?
+    @State private var rescan: ScanCoverage.RescanTarget?  // 점검 화면에서 고른 '다시 스캔' 목표
+    @State private var showPreReview = false
+    @State private var toast: String?
     // 화면을 가리는 안내는 눈(👁) 버튼 하나로 숨기고 보이게 — 설정은 기억한다
     @AppStorage("hud.hidden") private var hudHidden = false
     @AppStorage("hud.thumbExpanded") private var thumbExpanded = true
@@ -67,6 +74,13 @@ struct ScanAssetView: View {
         if center == nil { return .aim }
         return reviewing ? .review : .scan
     }
+    private struct LiveSnapshot {
+        var level: QualityLevel
+        var score: Float
+        var reasons: [QualityReason]
+        var distance: Float?
+    }
+
     private var segmented: Bool { center != nil && (seg != nil || segFallback) && !segBusy }
 
     private var steps: [GuideStep] {
@@ -135,15 +149,27 @@ struct ScanAssetView: View {
                     VStack(alignment: .trailing, spacing: 6) {
                         HudEyeButton(hidden: $hudHidden)
                         if !hudHidden, phase == .scan || phase == .review, let t = thumb {
-                            ScanThumbnail(data: t, targetSector: assist?.targetSector, expanded: $thumbExpanded)
+                            ScanThumbnail(data: t, target: ringTarget, expanded: $thumbExpanded)
                         }
                     }
                 }
                 .padding(.horizontal, 10)
 
                 if !hudHidden {
-                    // 지금 가장 도움 되는 카메라 워크 한 줄 (대상 지정 전에는 할 일)
-                    if phase == .scan, let a = assist { AssistChip(assist: a) }
+                    // 촬영 상태 + 지금 가장 도움 되는 한 줄 (경고가 있으면 그 이유·조치가, 좋으면 방향 안내가 같은 칸에 나온다 → 배너는 하나)
+                    if phase == .scan, let l = live {
+                        LiveQualityBar(level: l.level, score: l.score, reasons: l.level == .good ? [] : l.reasons,
+                                       distanceM: l.distance, hint: scanHint)
+                            .padding(.horizontal, 10)
+                        if let r = rescan {
+                            HStack(spacing: 8) {
+                                Label("다시 스캔: \(Self.sideLabel(r.title))", systemImage: "viewfinder").font(.caption.weight(.semibold))
+                                Button { rescan = nil } label: { Text("취소").font(.caption) }.buttonStyle(.bordered).controlSize(.mini)
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 5).background(.thinMaterial, in: Capsule())
+                        }
+                    }
+                    else if phase == .scan, let a = assist { AssistChip(assist: a) }
                     else if phase == .aim || phase == .needSpace {
                         AssistChip(assist: .init(level: .info, symbol: "scope", text: nextAction))
                     }
@@ -156,6 +182,7 @@ struct ScanAssetView: View {
                     if phase == .review { reviewPanel }
                     if phase == .scan && showCalib { calibPanel }
 
+                    if let toast { ScanToast(text: toast) }
                     if let infoMessage {
                         Text(infoMessage).font(.footnote).foregroundStyle(.blue)
                             .padding(8).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
@@ -174,7 +201,14 @@ struct ScanAssetView: View {
             }
             .padding(.top, 6)
             .padding(.bottom, 20)
+
+            // 빠진 방향이 화면 밖이면 가장자리 화살표 (사물 방위는 사람의 왼쪽으로 늘어남 → edgeDeg 부호는 Guidance가 처리)
+            if phase == .scan, !hudHidden, let g = guide {
+                EdgeGuide(deltaDeg: g.edgeDeg, vertical: g.up ? .up : .none,
+                          label: g.up ? "" : ScanCoverage.sideName(start: g.sector, length: 1))
+            }
         }
+        .fullScreenCover(isPresented: $showPreReview) { preReviewCover }
         .ignoresSafeArea(.keyboard)  // 키보드가 하단 버튼을 밀어 올리거나 가리지 않게
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -211,6 +245,7 @@ struct ScanAssetView: View {
         }
         .onDisappear { ar.pause() }
         .onReceive(Timer.publish(every: 0.6, on: .main, in: .common).autoconnect()) { _ in tick() }
+        .onReceive(Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()) { _ in fastTick() }
     }
 
     // MARK: - 주기 갱신: 썸네일·어시스트·라이브 외곽 보정
@@ -221,6 +256,87 @@ struct ScanAssetView: View {
         guard phase == .scan else { return }
         assist = hudHidden ? nil : ar.assistNow()
         maybeLiveRefine()
+    }
+
+    // MARK: - 실시간 품질·누락 안내
+
+    private static func sideLabel(_ title: String) -> String { title.components(separatedBy: " · ").first ?? title }
+
+    /// 배너의 보조 문구: 재스캔 중이면 어느 쪽으로 가야 하는지, 윗면만 남았으면 내려다보기, 아니면 기존 어시스트
+    private var scanHint: String? {
+        if let r = rescan {
+            let name = Self.sideLabel(r.title)
+            guard let g = guide else { return "‘\(name)’ 보강 중 — 이 방향을 천천히 비추세요" }
+            if g.up { return "위에서 내려다보며 윗면을 훑어 주세요" }
+            guard let d = g.edgeDeg else { return "‘\(name)’ 보강 중 — 이 방향을 천천히 비추세요" }
+            return "‘\(name)’ 다시 스캔 — \(d < 0 ? "왼쪽" : "오른쪽")으로 약 \(abs(Int(d)))° 이동"
+        }
+        if guide?.up == true { return "위에서 내려다보며 윗면도 훑어 주세요" }
+        return assist?.text
+    }
+
+    private func showToast(_ t: String) {
+        withAnimation { toast = t }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            await MainActor.run { withAnimation { if toast == t { toast = nil } } }
+        }
+    }
+
+    private func fastTick() {
+        guard phase == .scan, let sec = ar.cameraSector() else {
+            if live != nil { live = nil; guide = nil; ringTarget = nil }
+            return
+        }
+        let cov = ar.coverage
+        if var t = thumb { t.coverage = cov; t.camSector = sec; thumb = t }
+        if let r = rescan, cov.isSatisfied(r) {  // 목표 달성 → 자동 해제
+            ScanHaptics.complete()
+            showToast("‘\(Self.sideLabel(r.title))’ 보강 완료")
+            rescan = nil
+        }
+        guide = cov.guidance(camSector: sec, rescan: rescan)
+        ringTarget = cov.ringTarget(camSector: sec, rescan: rescan)
+        if ar.liveOut != nil {
+            live = LiveSnapshot(level: ar.liveFilter.level, score: ar.liveFilter.score, reasons: ar.liveFilter.reasons, distance: ar.liveDistance)
+        }
+    }
+
+    // MARK: - 분리 확인 전 점검
+
+    private var preReviewCover: some View {
+        let cov = ar.coverage
+        return ScanReviewView(
+            title: "분리 확인 전 점검 — 빠진 면이 있는지 확인",
+            grid: cov.reviewGrid, specs: RingSpec.object, mirror: true,
+            percent: cov.azimuthProgress, minRecommended: 0.9,
+            items: cov.problemDescs().map(ReviewItem.init),
+            onRescan: { item in startRescan(item) },
+            onProceed: { showPreReview = false; Task { await confirmSeparation() } })
+    }
+
+    /// [분리 확인]: 둘레가 90% 미만이거나 품질 낮은 칸이 있으면 점검 화면, 아니면 바로 진행
+    private func requestReview() {
+        let cov = ar.coverage
+        if cov.needsReview() {
+            showPreReview = true
+        } else {
+            if cov.topProgress < ScanCoverage.topListBelow { infoMessage = "둘레는 충분합니다 — 윗면은 아직 거의 없습니다(선택)" }
+            Task { await confirmSeparation() }
+        }
+    }
+
+    private func startRescan(_ item: ReviewItem?) {
+        let cov = ar.coverage
+        let ds = cov.problemDescs()
+        let d = item.flatMap { it in ds.first { $0.ring == it.ring && $0.start == it.sector } } ?? ds.first
+        showPreReview = false
+        guard let d else { return }
+        let t = cov.rescanTarget(for: d)
+        ar.coverage.prepareRescan(t)
+        rescan = t
+        infoMessage = nil
+        showToast("‘\(Self.sideLabel(d.title))’ 쪽으로 이동해 다시 비추세요")
     }
 
     /// 스캔하는 동안 몇 초마다 대상 주변을 서버에서 분리해 초록 외곽선으로 보여 준다.
@@ -420,7 +536,7 @@ struct ScanAssetView: View {
                 .buttonStyle(.bordered).tint(showCalib ? .orange : .blue)
                 Button(role: .cancel) { clearCenter() } label: { Text("대상 다시").font(.footnote) }
                     .buttonStyle(.bordered)
-                Button { Task { await confirmSeparation() } } label: {
+                Button { requestReview() } label: {
                     Label("분리 확인", systemImage: "checkmark.viewfinder").frame(height: 30)
                 }
                 .buttonStyle(.borderedProminent)
@@ -499,6 +615,7 @@ struct ScanAssetView: View {
         center = nil; reviewing = false; seg = nil; mask = []; ctx = nil; segFallback = false; message = nil
         outline = nil; assessment = nil; refinedPoints = []; refinedNormals = []
         centerConfirmed = false; showCalib = false; autoCalib = true; assist = nil; thumb = nil
+        rescan = nil; guide = nil; ringTarget = nil; live = nil; showPreReview = false
         lastLiveCount = 0; lastLiveAt = .distantPast
         ar.clearPreview()
         ar.clearTarget()
@@ -553,6 +670,8 @@ struct ScanAssetView: View {
 
     /// 둘레를 충분히 돌았으면 사물을 분리해 외곽선·품질을 확인한다
     private func confirmSeparation() async {
+        DebugLog.log("scan", ar.coverage.summaryLine())  // 스캔을 떠나는 순간의 품질 요약 (실기기 테스트 디브리프용)
+        rescan = nil; guide = nil; ringTarget = nil; live = nil
         infoMessage = nil
         reviewing = true
         showCalib = false

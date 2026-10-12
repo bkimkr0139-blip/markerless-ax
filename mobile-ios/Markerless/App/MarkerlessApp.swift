@@ -11,7 +11,11 @@ struct MarkerlessApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            Group {
+                // 검증용: `-qualitygallery` 실행 인자로만 품질 모니터링 UI 갤러리를 연다 (일반 실행에는 영향 없음)
+                if ProcessInfo.processInfo.arguments.contains("-qualityreview") { QualityReviewDemo() }
+                else if ProcessInfo.processInfo.arguments.contains("-qualitygallery") { QualityKitGallery() } else { RootView() }
+            }
                 .environmentObject(appState)
                 .onAppear { appState.startSync() }
                 .onChange(of: scenePhase) { _, phase in

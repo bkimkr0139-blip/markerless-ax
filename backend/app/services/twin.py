@@ -494,6 +494,7 @@ def _persist_result(db: Session, storage: FileStorage, space_id: int, session_id
                                  uncertainty_m=0.03 if sk == "OBSERVED" else None, session_ids=session_ids,
                                  review_status="AUTO" if sk == "OBSERVED" and res.quality == "GOOD" else "REVIEW_REQUIRED"))
     _store_walls(db, space_id, rev, res.structure, old)
+    _auto_place(db, space_id)
     rev.stats = {**rev.stats, "objects": res.objects}
     for box in _asset_boxes_db(db, space_id):  # 자산↔공간 메시 연결(이중 표면 방지 영역). 마스크 방식은 기본 space-background-only
         link = db.scalar(select(AssetGeometryLink).where(AssetGeometryLink.asset_id == box["assetId"], AssetGeometryLink.space_id == space_id))
@@ -515,6 +516,24 @@ def _persist_result(db: Session, storage: FileStorage, space_id: int, session_id
         if "fitness" in info:
             db.add(RegistrationRun(space_id=space_id, src_session_id=sess.id, dst_ref=rev.id, fitness=info["fitness"], rmse_m=info.get("rmse", 0.0),
                                    accepted=bool(info.get("accepted")), ambiguous=bool(info.get("ambiguous")), reason=info.get("reason", "")))
+
+
+def _auto_place(db: Session, space_id: int) -> None:
+    """건물에 배치되지 않은 공간은 프로젝트의 '미배정 건물(자동)'·1층에 임시 배치한다 — 웹 투어에서 바로 볼 수 있게.
+    위치는 같은 층 기존 방 오른쪽에 일렬로 놓은 임의 배치이므로 REVIEW_REQUIRED(건물 안 실제 위치는 관리자가 지정)."""
+    sp = db.get(Space, space_id)
+    if sp is None or sp.building_id is not None:
+        return
+    b = db.scalar(select(Building).where(Building.project_code == sp.project_code, Building.name == "미배정 건물 (자동)"))
+    if b is None:
+        b = create_building(db, sp.project_code, "미배정 건물 (자동)", None, "default", None, None)
+        b.notice = "공간 위치는 자동 배치(임의) — 관리자가 실제 위치를 지정해야 합니다"
+    fl = db.scalar(select(Floor).where(Floor.building_id == b.id))
+    if fl is None:
+        fl = Floor(building_id=b.id, level="1F", elevation_m=0.0, height_m=3.0)
+        db.add(fl)
+        db.flush()
+    place_space(db, sp, b.id, fl.id, None, sp.kind or "ROOM")
 
 
 def _asset_boxes_db(db: Session, space_id: int) -> list[dict]:

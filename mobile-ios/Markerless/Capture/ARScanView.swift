@@ -74,7 +74,12 @@ final class ScanSessionController: NSObject, ObservableObject {
     private(set) var target: SIMD3<Float>?
     var coverage = ScanCoverage()
     private var lastCoverTime: TimeInterval = 0
-    private var lastHaptic = Date.distantPast
+    // 사물 스캔 실시간 품질 (화면이 0.25초마다 읽는다): 필터링된 레벨 + 이유 + 대상까지 거리
+    private(set) var liveFilter = LevelFilter()
+    private(set) var liveOut: LiveQuality.Output?
+    private(set) var liveDistance: Float?
+    private var liveDepthConf: Float?
+    private var lastConfAt: TimeInterval = 0
     private var sawRelocalizing = false
     private var completeNotified = false
     private var targetAnchor: AnchorEntity?
@@ -83,7 +88,7 @@ final class ScanSessionController: NSObject, ObservableObject {
     func setTarget(_ c: SIMD3<Float>, focusRadius: Float = 1.3) {
         let first = target == nil
         target = c
-        if first, let t = cameraPosition { coverage.reset(); coverage.setOrigin(camPos: t, center: c); completeNotified = false }
+        if first, let t = cameraPosition { coverage.reset(); coverage.setOrigin(camPos: t, center: c); completeNotified = false; liveFilter.reset(); liveOut = nil }
         if hasLiDAR { fusion.setFocus(center: c, radius: focusRadius) }
         drawTargetMarker()
         DebugLog.log("ar", "스캔 대상 지정 (\(c.x), \(c.y), \(c.z))", extra: ["focus": "\(focusRadius)", "first": "\(first)"])
@@ -101,6 +106,7 @@ final class ScanSessionController: NSObject, ObservableObject {
         target = nil
         coverage.reset()
         completeNotified = false
+        liveFilter.reset(); liveOut = nil; liveDistance = nil
         if hasLiDAR { fusion.setFocus(center: nil, radius: 0) }
         if let a = targetAnchor { arView.scene.removeAnchor(a); targetAnchor = nil }
     }
@@ -120,6 +126,15 @@ final class ScanSessionController: NSObject, ObservableObject {
         let pos = SIMD3<Float>(col.3.x, col.3.y, col.3.z)
         let fwd = simd_normalize(-SIMD3<Float>(col.2.x, col.2.y, col.2.z))
         return coverage.assist(camPos: pos, camFwd: fwd, center: c, tracking: trackingNormal, tooFast: motionTooFast)
+    }
+
+    /// 지금 카메라가 있는 방위 섹터 (대상이 있어야 한다)
+    func cameraSector() -> Int? {
+        guard let c = target, let t = arView.session.currentFrame?.camera.transform else { return nil }
+        let col = t.columns
+        let pos = SIMD3<Float>(col.3.x, col.3.y, col.3.z)
+        let fwd = simd_normalize(-SIMD3<Float>(col.2.x, col.2.y, col.2.z))
+        return coverage.pose(camPos: pos, camFwd: fwd, center: c).sector
     }
 
     /// 상단 썸네일용: 대상 주변 누적 점(대상 중심 기준 상대 좌표)과 카메라 위치
@@ -778,6 +793,21 @@ final class ScanSessionController: NSObject, ObservableObject {
 // MARK: - ARSessionDelegate
 
 extension ScanSessionController: ARSessionDelegate {
+    /// 깊이 신뢰도 맵(0 낮음/1 중간/2 높음)의 중앙 창(가로·세로 중앙 25%) 평균 0...2
+    nonisolated static func centerConfidence(_ buf: CVPixelBuffer) -> Float? {
+        CVPixelBufferLockBaseAddress(buf, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buf, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(buf) else { return nil }
+        let w = CVPixelBufferGetWidth(buf), h = CVPixelBufferGetHeight(buf), bpr = CVPixelBufferGetBytesPerRow(buf)
+        guard w >= 8, h >= 8 else { return nil }
+        let p = base.assumingMemoryBound(to: UInt8.self)
+        var sum = 0, n = 0
+        for y in stride(from: h * 3 / 8, to: h * 5 / 8, by: 2) {
+            for x in stride(from: w * 3 / 8, to: w * 5 / 8, by: 2) { sum += Int(p[y * bpr + x]); n += 1 }
+        }
+        return n > 0 ? Float(sum) / Float(n) : nil
+    }
+
     nonisolated func session(_ session: ARSession, didUpdate frame: ARFrame) {
         let newMeshIDs = frame.anchors.compactMap { ($0 as? ARMeshAnchor)?.identifier }
         let rawPoints = frame.rawFeaturePoints?.points ?? []
@@ -792,10 +822,11 @@ extension ScanSessionController: ARSessionDelegate {
             let pos = SIMD3<Float>(tr.3.x, tr.3.y, tr.3.z)
             let fwd = simd_normalize(-SIMD3<Float>(tr.2.x, tr.2.y, tr.2.z))
             var moving = false
+            var lin: Float = 0, ang: Float = 0
             if let lp = self.lastPos, let lf = self.lastFwd, frame.timestamp > self.lastPoseT {
                 let dt = Float(frame.timestamp - self.lastPoseT)
-                let lin = simd_distance(pos, lp) / dt
-                let ang = acos(max(-1, min(1, simd_dot(fwd, lf)))) / dt
+                lin = simd_distance(pos, lp) / dt
+                ang = acos(max(-1, min(1, simd_dot(fwd, lf)))) / dt
                 moving = lin > 0.5 || ang > 1.0
             }
             self.lastPos = pos; self.lastFwd = fwd; self.lastPoseT = frame.timestamp
@@ -826,16 +857,32 @@ extension ScanSessionController: ARSessionDelegate {
                     self.stableCount = self.featureObs.values.filter { $0 >= self.minObs }.count
                 }
             }
-            if let t = self.target, frame.camera.trackingState == .normal, !moving, frame.timestamp - self.lastCoverTime > 0.1 {
+            if let t = self.target, frame.timestamp - self.lastCoverTime > 0.1 {
                 self.lastCoverTime = frame.timestamp
-                if self.coverage.add(camPos: pos, camFwd: fwd, center: t) {  // 새 칸이 채워질 때마다 가볍게 진동
-                    if Date().timeIntervalSince(self.lastHaptic) > 0.35 {
-                        self.lastHaptic = Date()
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                let normal = frame.camera.trackingState == .normal
+                // 시선 중앙 깊이 신뢰도 (LiDAR 기기만, 5Hz)
+                if let cb = confBox {
+                    if frame.timestamp - self.lastConfAt > 0.2 {
+                        self.lastConfAt = frame.timestamp
+                        self.liveDepthConf = Self.centerConfidence(cb.buffer)
                     }
+                } else { self.liveDepthConf = nil }
+                var inp = LiveQuality.Input()
+                inp.speedMPerS = lin; inp.angRadPerS = ang
+                inp.blur = moving ? 0.6 : 0
+                inp.depthConf = self.liveDepthConf
+                inp.trackingNormal = normal
+                inp.ambient = frame.lightEstimate.map { Float($0.ambientIntensity) }
+                let smp = self.coverage.evaluate(camPos: pos, camFwd: fwd, center: t, base: inp)
+                self.liveOut = smp.live
+                self.liveDistance = smp.pose.distance
+                if let ch = self.liveFilter.push(smp.live), ch.worse { ScanHaptics.qualityBad() }
+                // 빠르게 움직이는 동안은 격자에 넣지 않는다 (번진 프레임). 느린 움직임은 속도 감점으로 품질에 반영된다.
+                if normal, !moving, self.coverage.record(smp) {  // 칸이 '양호'로 올라갈 때 한 번만 (연타 방지는 ScanHaptics)
+                    ScanHaptics.cellFilled()
                     if !self.completeNotified, self.coverage.complete {
                         self.completeNotified = true
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)  // 한 바퀴 완료
+                        ScanHaptics.complete()  // 한 바퀴 완료
                     }
                 }
             }

@@ -288,3 +288,23 @@ def test_object_candidates_assets_link_and_design_layer(client):
     assert "OBSERVED" in sp2["sourceKinds"] and sp2["layers"]["observed"], "관측 레이어는 그대로"
     assert c.get(sp2["layers"]["design"]).status_code == 200
     assert c.post("/api/v1/spaces/R1/design-geometry", files={"model": ("d.glb", b"garbage", "model/gltf-binary")}).status_code == 422
+
+
+def test_unplaced_space_is_auto_placed_for_tour(client):
+    """배치하지 않은 공간도 재구성이 끝나면 임시 건물·1층에 자동 배치되어 웹 투어에 나타난다(검토 필요)."""
+    c = client
+    c.post("/api/v1/projects", json={"projectId": "P1", "name": "p"})
+    c.post("/api/v1/projects/P1/spaces", json={"spaceId": "AUTO1"})
+    sid, st = scan_room(c, "AUTO1", SynthRoom(size=(4.0, 2.7, 3.5)), n=60)
+    assert st["revisionId"]
+    bs = c.get("/api/v1/buildings").json()
+    assert len(bs) == 1 and bs[0]["name"] == "미배정 건물 (자동)" and bs[0]["floors"]
+    man = c.get(f"/api/v1/buildings/{bs[0]['id']}/tour-manifest").json()
+    assert man["spaces"][0]["spaceId"] == "AUTO1" and man["spaces"][0]["texturedGlbUrl"]
+    # 두 번째 방도 같은 건물에 (겹치지 않게 옆으로)
+    c.post("/api/v1/projects/P1/spaces", json={"spaceId": "AUTO2"})
+    scan_room(c, "AUTO2", SynthRoom(size=(3.0, 2.7, 3.0)), n=60, seed=2)
+    assert len(c.get("/api/v1/buildings").json()) == 1
+    m2 = c.get(f"/api/v1/buildings/{bs[0]['id']}/tour-manifest").json()
+    xs = sorted(mat[12] for mat in (s["tBuildingSpace"] for s in m2["spaces"]))
+    assert len(xs) == 2 and xs[1] - xs[0] > 3.0, "두 방이 겹치지 않게 배치"
